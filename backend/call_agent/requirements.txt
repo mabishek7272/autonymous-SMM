@@ -1,0 +1,12 @@
+# E-Kalavya voice call agent. Only packages that are imported by call_agent/.
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29,<1.0     # includes the websockets implementation needed for /ws/call
+httpx>=0.27,<1.0
+numpy>=1.26,<3.0
+scipy>=1.11,<2.0                 # polyphase resampler (falls back to linear interpolation if absent)
+torch>=2.2,<3.0                  # Whisper STT (and MMS TTS if TTS_PROVIDER=mms)
+transformers>=4.45,<6.0
+
+# Optional extras (not needed for the server):
+# webrtcvad>=2.0.10              # better VAD; the energy VAD is used when it is not installed
+# sounddevice>=0.4.6             # microphone/speaker for `python -m call_agent.cli_call`

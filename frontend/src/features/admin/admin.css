@@ -1,0 +1,50 @@
+.adm-stack { display: flex; flex-direction: column; gap: 16px; }
+.adm-row { display: flex; align-items: center; gap: 10px; }
+.adm-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.adm-form { display: flex; flex-direction: column; gap: 14px; }
+.adm-user { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.adm-user__name { font-weight: 600; color: var(--text-main); }
+.adm-muted { color: var(--text-muted); font-size: 12px; }
+.adm-mono { font-family: var(--font-mono); font-size: 12px; }
+.adm-strength { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.adm-strength__bars { display: flex; gap: 3px; }
+.adm-strength__bar { width: 28px; height: 4px; border-radius: 2px; background: var(--border-subtle); }
+.adm-strength__bar--on { background: var(--primary); }
+.adm-matrix { width: 100%; border-collapse: collapse; font-size: 13px; }
+.adm-matrix th, .adm-matrix td { padding: 8px 10px; border-bottom: 1px solid var(--border-faint); text-align: center; }
+.adm-matrix th:first-child, .adm-matrix td:first-child { text-align: left; }
+.adm-matrix th { font-family: var(--font-heading); font-size: 12px; color: var(--text-soft); }
+.adm-yes { color: var(--success); display: inline-flex; }
+.adm-no { color: var(--text-dim); }
+.adm-roles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+.adm-roles p { margin: 4px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.adm-banner { padding: 10px 12px; border-radius: var(--radius-md); font-size: 13px; border: 1px solid var(--border-subtle); background: var(--surface-sunken); }
+.adm-banner--ok { background: var(--success-bg); border-color: var(--success-border); color: var(--success); }
+.adm-banner--bad { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger); }
+.adm-banner--warn { background: var(--warning-bg); border-color: var(--warning-border); color: var(--accent-warm-dark); }
+.adm-pre { font-family: var(--font-mono); font-size: 12.5px; white-space: pre-wrap; background: var(--surface-sunken); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; min-height: 80px; margin: 0; }
+.adm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.adm-stat { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; }
+.adm-stat__label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.adm-stat__value { font-family: var(--font-heading); font-size: 20px; font-weight: 700; color: var(--text-main); margin-top: 2px; }
+.adm-models { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.adm-chat { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+.adm-bubble { padding: 8px 12px; border-radius: var(--radius-md); font-size: 13px; max-width: 80%; white-space: pre-wrap; }
+.adm-bubble--p { align-self: flex-end; background: var(--primary-bg); border: 1px solid var(--primary-border); }
+.adm-bubble--a { align-self: flex-start; background: var(--surface-sunken); border: 1px solid var(--border-subtle); }
+@media (max-width: 1100px) { .adm-roles { grid-template-columns: repeat(2, 1fr); } .adm-grid-2 { grid-template-columns: 1fr; } }
+
+.adm-import { display: flex; flex-direction: column; gap: 10px; }
+.adm-import__summary { font-size: 12.5px; font-weight: 600; color: var(--success); }
+.adm-import__bad { color: var(--danger); font-size: 12.5px; font-weight: 600; }
+.adm-import__errors, .adm-import__warn { list-style: none; border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
+.adm-import__errors { background: var(--danger-bg); border: 1px solid var(--danger-border); color: var(--danger); }
+.adm-import__warn { background: var(--accent-warm-bg); border: 1px solid var(--accent-warm-border); color: var(--accent-warm-dark); }
+.adm-import__batches { font-size: 12px; color: var(--text-muted); }
+.adm-import__batches summary { cursor: pointer; font-weight: 600; }
+.adm-import__batches p { margin-top: 6px; line-height: 1.7; font-family: var(--font-mono); font-size: 11.5px; }
+.adm-cred { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.adm-cred th, .adm-cred td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border-subtle); }
+.adm-cred th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.adm-mono { font-family: var(--font-mono); }
+.adm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

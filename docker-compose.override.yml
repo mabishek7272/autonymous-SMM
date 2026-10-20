@@ -1,0 +1,12 @@
+# Local-development overrides, loaded automatically by `docker compose up`.
+# Production must NOT use this file:  docker compose -f docker-compose.yml up -d
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+  evolution-go:
+    ports:
+      - "127.0.0.1:8081:8080"   # Manager UI / QR pairing: http://localhost:8081/manager

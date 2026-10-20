@@ -1,0 +1,26 @@
+.cl__stack { display: flex; flex-direction: column; gap: 16px; }
+.cl__toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+.cl__toolbar-actions { display: flex; gap: 8px; flex: none; }
+.cl__h2 { font: 600 17px var(--font-heading); }
+.cl__h3 { font: 600 16px var(--font-heading); }
+.cl__hint { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; max-width: 640px; }
+.cl__muted { color: var(--text-dim); font-size: 12px; }
+.cl__name { font-weight: 600; }
+.cl__url { display: inline-flex; align-items: center; gap: 6px; max-width: 360px; font: 400 12px var(--font-mono); }
+.cl__url span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl__actions { display: flex; gap: 2px; justify-content: flex-end; }
+.cl__form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cl__full { grid-column: 1 / -1; }
+.cl__import { display: flex; flex-direction: column; gap: 10px; }
+.cl__summary { font-size: 12.5px; font-weight: 600; color: var(--success); }
+.cl__bad { color: var(--danger); font-size: 12.5px; font-weight: 600; }
+.cl__warn { color: var(--accent-warm-dark); background: var(--accent-warm-bg); border: 1px solid var(--accent-warm-border); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 12.5px; }
+.cl__errors { list-style: none; background: var(--danger-bg); border: 1px solid var(--danger-border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px; color: var(--danger); display: flex; flex-direction: column; gap: 3px; }
+.cl__batch-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 14px; }
+.cl__link-select { min-width: 280px; }
+.cl__schedule { border-top: 1px solid var(--border-subtle); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.cl__schedule-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.cl__slot { display: grid; grid-template-columns: 150px 130px 100px minmax(200px, 1fr) auto; gap: 8px; align-items: end; }
+.cl__schedule-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+.cl__teacher-select { margin-top: 8px; max-width: 320px; }

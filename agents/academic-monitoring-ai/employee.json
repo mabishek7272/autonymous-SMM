@@ -1,0 +1,64 @@
+{
+  "schema": "ai-employee/1",
+  "slug": "academic-monitoring-ai",
+  "name": "Academic Monitoring AI",
+  "role": "Continuous evaluation of student marks, attendance trends, and diagnostic weak-area flagging",
+  "version": "1.0.0",
+  "standard": "1.5",
+  "project": "E-Kalavya",
+  "requires": {
+    "node": ">=20",
+    "harness": [
+      "hermes",
+      "antigravity"
+    ]
+  },
+  "api_base": "${EKALAVYA_API_URL}/api/v1",
+  "api_key_env": "EKALAVYA_AGENT_KEY",
+  "tool_permissions": {
+    "allowed": [
+      "get_student_summary",
+      "get_student_records"
+    ],
+    "denied": [
+      "create_student",
+      "update_student",
+      "delete_student",
+      "create_lead",
+      "update_lead_status",
+      "get_teacher_salary",
+      "approve_payment",
+      "send_whatsapp_message"
+    ]
+  },
+  "routines": [
+    {
+      "id": "analyze-performance",
+      "trigger": "event",
+      "event": "academic_record_submitted",
+      "budget": "2 min",
+      "description": "Analyze newly uploaded test score or attendance record and update student diagnostic profile"
+    },
+    {
+      "id": "flag-weak-areas",
+      "trigger": "cron",
+      "cron": "0 18 * * 5",
+      "budget": "15 min",
+      "description": "Weekly Friday scan of all active students to flag RED/YELLOW health anomalies"
+    }
+  ],
+  "memory": {
+    "scope": "per_student",
+    "shared_with": [
+      "parent-engagement-ai",
+      "chief-of-staff-ai"
+    ],
+    "storage": "redis",
+    "ttl_hours": 720
+  },
+  "guardrails": {
+    "min_test_threshold_for_red": 1,
+    "require_human_confirmation_for_remedial_action": true,
+    "privacy_compliance": "strict_minor_data_isolation"
+  }
+}

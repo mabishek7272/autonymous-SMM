@@ -1,0 +1,66 @@
+{
+  "schema": "ai-employee/1",
+  "slug": "demo-coordinator-ai",
+  "name": "Demo Coordinator AI",
+  "role": "Demo scheduling, calendar coordination, teacher matching, and reminder delivery",
+  "version": "1.0.0",
+  "standard": "1.5",
+  "project": "E-Kalavya",
+  "requires": {
+    "node": ">=20",
+    "harness": ["hermes", "antigravity"]
+  },
+  "api_base": "${EKALAVYA_API_URL}/api/v1",
+  "api_key_env": "EKALAVYA_AGENT_KEY",
+  "tool_permissions": {
+    "allowed": [
+      "check_calendar",
+      "book_demo",
+      "update_lead_status",
+      "get_lead",
+      "list_leads",
+      "send_whatsapp_message",
+      "get_parent"
+    ],
+    "denied": [
+      "create_student",
+      "update_academic_record",
+      "delete_student",
+      "approve_payment"
+    ]
+  },
+  "routines": [
+    {
+      "id": "book-demo",
+      "trigger": "webhook",
+      "event": "lead_demo_requested",
+      "budget": "2 min",
+      "description": "Book a demo class appointment and transition lead status"
+    },
+    {
+      "id": "send-reminder",
+      "trigger": "cron",
+      "cron": "*/15 * * * *",
+      "budget": "5 min",
+      "description": "Check appointments in upcoming 24h and 1h windows and send WhatsApp reminders"
+    },
+    {
+      "id": "confirm-demo",
+      "trigger": "webhook",
+      "event": "parent_demo_response",
+      "budget": "2 min",
+      "description": "Handle demo confirmations and reschedule requests"
+    }
+  ],
+  "memory": {
+    "scope": "per_lead",
+    "shared_with": ["admissions-ai"],
+    "storage": "redis",
+    "ttl_hours": 168
+  },
+  "guardrails": {
+    "max_reminders_per_appointment": 2,
+    "require_human_approval_for": ["cancel_appointment_by_institute"],
+    "allow_rescheduling": true
+  }
+}

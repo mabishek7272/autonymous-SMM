@@ -1,0 +1,73 @@
+{
+  "schema": "ai-employee/1",
+  "slug": "admissions-ai",
+  "name": "Admissions AI",
+  "role": "Lead qualification and admissions pipeline management",
+  "version": "1.0.0",
+  "standard": "1.5",
+  "project": "E-Kalavya",
+  "requires": {
+    "node": ">=20",
+    "harness": ["hermes", "antigravity"]
+  },
+  "api_base": "${EKALAVYA_API_URL}/api/v1",
+  "api_key_env": "EKALAVYA_AGENT_KEY",
+  "tool_permissions": {
+    "allowed": [
+      "create_lead",
+      "qualify_lead",
+      "update_lead_status",
+      "get_lead",
+      "list_leads",
+      "send_whatsapp_message",
+      "get_parent",
+      "check_calendar",
+      "handoff_to_demo_coordinator"
+    ],
+    "denied": [
+      "book_demo",
+      "create_student",
+      "update_academic_record",
+      "get_teacher_salary",
+      "delete_student",
+      "approve_payment"
+    ]
+  },
+  "routines": [
+    {
+      "id": "lead-intake",
+      "trigger": "webhook",
+      "event": "inbound_message",
+      "budget": "2 min",
+      "description": "Process an inbound WhatsApp message from a new or existing lead"
+    },
+    {
+      "id": "qualify-lead",
+      "trigger": "webhook",
+      "event": "lead_ready_for_qualification",
+      "budget": "3 min",
+      "description": "Conduct qualification conversation and fill lead details"
+    },
+    {
+      "id": "daily-followup",
+      "days": "mon-sat",
+      "fire": "10:00",
+      "window_start": "09:45",
+      "window_end": "11:30",
+      "period_key": "YYYY-MM-DD",
+      "budget": "20 min",
+      "description": "Follow up with all enquiry and qualified leads that have not responded in 48h"
+    }
+  ],
+  "memory": {
+    "scope": "per_lead",
+    "shared_with": ["demo-coordinator-ai"],
+    "storage": "redis",
+    "ttl_hours": 168
+  },
+  "guardrails": {
+    "max_messages_per_lead_per_day": 3,
+    "require_human_approval_for": ["mark_as_lost", "convert_lead"],
+    "never_discuss": ["competitor pricing", "teacher salaries", "other students' records"]
+  }
+}

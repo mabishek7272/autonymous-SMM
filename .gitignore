@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment Variables & Secrets (CRITICAL)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+!*.env.example
+
+# Production Builds
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+
+# Logs & Debugging
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor Config
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Temporary & Cache
+tmp/
+temp/
+.cache/
+.eslintcache
+.parcel-cache
+
+# Large ML Weights / Binary Artifacts
+model/**/*.safetensors
+model/**/*.bin
+model/**/*.pt
+model/**/*.onnx
+
+# Voice model artifacts and clipboard clippings (may hold tokens)
+backend/model/*.safetensors
+backend/model/whisper-tamil-small/*.bin
+backend/model/whisper-tamil-small/*.msgpack
+**/__pycache__/
+*.textClipping
+.claude/worktrees/

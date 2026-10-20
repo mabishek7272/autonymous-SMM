@@ -1,0 +1,178 @@
+:root {
+  --bg-main: #FAFAFC;
+  --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8FAFC;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+  --border-subtle: #E2E8F0;
+  --border-medium: #CBD5E1;
+  --border-focus: #7C3AED;
+  
+  --primary: #7C3AED;
+  --primary-glow: rgba(124, 58, 237, 0.25);
+  --primary-light: #8B5CF6;
+  --primary-dark: #6D28D9;
+  --primary-bg: #F5F3FF;
+  --primary-border: #DDD6FE;
+
+  --accent-warm: #F97316;
+  --accent-warm-dark: #C2410C;
+  --accent-warm-bg: #FFF7ED;
+  --accent-warm-border: #FED7AA;
+
+  --success: #059669;
+  --success-bg: #ECFDF5;
+  --success-border: #A7F3D0;
+
+  --warning: #F59E0B;
+  --warning-bg: #FFFBEB;
+  --warning-border: #FDE68A;
+
+  --danger: #DC2626;
+  --danger-bg: #FEF2F2;
+  --danger-border: #FCA5A5;
+
+  --text-main: #0F172A;
+  --text-body: #334155;
+  --text-soft: #475569;
+  --violet-deep: #5B21B6;
+  --violet-ink: #2E1065;
+  --violet-line: #C4B5FD;
+  --ink-toast: #1E1B4B;
+  --border-faint: #F1F5F9;
+  --surface-sunken: rgba(241, 245, 249, 0.6);
+  --warm-hover: #FFEDD5;
+  --warm-line: #FDBA74;
+  --info: #2563EB;
+  --info-bg: #EFF6FF;
+  --info-border: #BFDBFE;
+  --shadow-drawer: -12px 0 40px -12px rgba(15, 23, 42, 0.12);
+  --header-h: 64px;
+  --z-header: 40;
+  --z-drawer: 35;
+  --z-modal: 50;
+  --z-toast: 60;
+  --text-muted: #64748B;
+  --text-dim: #94A3B8;
+
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --radius-sm: 7px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  --shadow-hover: 0 8px 24px -8px rgba(124, 58, 237, 0.18);
+  --shadow-modal: 0 30px 70px -20px rgba(15, 23, 42, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-main);
+  background-image: 
+    radial-gradient(circle at 12% 8%, rgba(139, 92, 246, 0.05) 0%, transparent 42%),
+    radial-gradient(circle at 88% 92%, rgba(249, 115, 22, 0.04) 0%, transparent 40%);
+  background-attachment: fixed;
+  color: var(--text-main);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+a {
+  color: #6D28D9;
+  text-decoration: none;
+}
+a:hover {
+  color: #7C3AED;
+  text-decoration: underline;
+}
+
+*:focus-visible {
+  outline: 2px solid #7C3AED;
+  outline-offset: 2px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* Animations */
+@keyframes ekPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.45); }
+  70% { box-shadow: 0 0 0 7px rgba(124, 58, 237, 0); }
+}
+
+@keyframes ekBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@keyframes ekIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ekSlideInRight {
+  from { transform: translateX(105%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Glass panel */
+.glass-panel {
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.glass-panel:hover {
+  border-color: #DDD6FE;
+  box-shadow: var(--shadow-hover);
+}

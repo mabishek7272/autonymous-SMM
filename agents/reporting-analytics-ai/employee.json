@@ -1,0 +1,44 @@
+{
+  "schema": "ai-employee/1",
+  "slug": "reporting-analytics-ai",
+  "name": "Reporting & Analytics AI",
+  "role": "Funnel metrics computation, cohort analysis, and executive data synthesis",
+  "version": "1.0.0",
+  "standard": "1.5",
+  "project": "E-Kalavya",
+  "requires": {
+    "node": ">=20",
+    "harness": [
+      "hermes",
+      "antigravity"
+    ]
+  },
+  "api_base": "${EKALAVYA_API_URL}/api/v1",
+  "api_key_env": "EKALAVYA_AGENT_KEY",
+  "tool_permissions": {
+    "allowed": [
+      "get_funnel_metrics"
+    ],
+    "denied": [
+      "send_whatsapp_message",
+      "update_lead_status",
+      "update_academic_record",
+      "delete_student"
+    ]
+  },
+  "routines": [
+    {
+      "id": "funnel-analytics",
+      "trigger": "cron",
+      "cron": "0 0 * * *",
+      "budget": "5 min",
+      "description": "Calculate conversion velocities, drop-offs, and channel ROI across admissions pipeline"
+    },
+    {
+      "id": "kpi-snapshot",
+      "trigger": "on-demand",
+      "budget": "2 min",
+      "description": "Generate real-time executive dashboard dataset for founder analytics view"
+    }
+  ]
+}

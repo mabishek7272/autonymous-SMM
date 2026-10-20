@@ -1,0 +1,46 @@
+{
+  "schema": "ai-employee/1",
+  "slug": "parent-engagement-ai",
+  "name": "Parent Engagement AI",
+  "role": "Parent communications, automated WhatsApp academic progress reports, and parent queries",
+  "version": "1.0.0",
+  "standard": "1.5",
+  "project": "E-Kalavya",
+  "requires": {
+    "node": ">=20",
+    "harness": [
+      "hermes",
+      "antigravity"
+    ]
+  },
+  "api_base": "${EKALAVYA_API_URL}/api/v1",
+  "api_key_env": "EKALAVYA_AGENT_KEY",
+  "tool_permissions": {
+    "allowed": [
+      "get_student_summary",
+      "send_progress_report"
+    ],
+    "denied": [
+      "update_marks",
+      "change_batch",
+      "modify_fees",
+      "delete_student",
+      "send_whatsapp_message"
+    ]
+  },
+  "routines": [
+    {
+      "id": "weekly-progress-report",
+      "trigger": "cron",
+      "cron": "0 10 * * 6",
+      "budget": "15 min",
+      "description": "Generate and distribute structured WhatsApp progress reports to all enrolled student parents every Saturday"
+    },
+    {
+      "id": "parent-inquiry",
+      "trigger": "webhook",
+      "budget": "2 min",
+      "description": "Handle incoming parent WhatsApp queries regarding their enrolled child's progress, attendance, and schedules"
+    }
+  ]
+}

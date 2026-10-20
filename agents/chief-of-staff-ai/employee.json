@@ -1,0 +1,48 @@
+{
+  "schema": "ai-employee/1",
+  "slug": "chief-of-staff-ai",
+  "name": "Chief of Staff AI",
+  "role": "Global agent supervisor, exception detection, and founder daily briefing",
+  "version": "1.0.0",
+  "standard": "1.5",
+  "project": "E-Kalavya",
+  "requires": {
+    "node": ">=20",
+    "harness": [
+      "hermes",
+      "antigravity"
+    ]
+  },
+  "api_base": "${EKALAVYA_API_URL}/api/v1",
+  "api_key_env": "EKALAVYA_AGENT_KEY",
+  "tool_permissions": {
+    "allowed": [
+      "get_agent_status",
+      "get_activity_logs",
+      "flag_exception"
+    ],
+    "denied": [
+      "update_lead_status",
+      "update_academic_record",
+      "approve_payment",
+      "delete_student",
+      "send_whatsapp_message"
+    ]
+  },
+  "routines": [
+    {
+      "id": "daily-briefing",
+      "trigger": "cron",
+      "cron": "0 8 * * *",
+      "budget": "10 min",
+      "description": "Synthesize daily KPI briefing and WhatsApp summary to Founder at 8:00 AM"
+    },
+    {
+      "id": "exception-monitor",
+      "trigger": "cron",
+      "cron": "*/30 * * * *",
+      "budget": "5 min",
+      "description": "Inspect agent activity log for failed tools or anomalies"
+    }
+  ]
+}

@@ -1,0 +1,538 @@
+// This is the Prisma schema for E-Kalavya.
+// It maps directly to the Backend_Schema.md definition.
+// Run `npx prisma migrate dev` to apply.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 3.1 — User & Role Management
+// ============================================================
+
+enum UserRole {
+  superadmin
+  admin
+  manager
+  teacher
+  parent
+  student
+}
+
+model User {
+  id           String   @id @default(uuid()) @map("user_id")
+  fullName     String   @map("full_name") @db.VarChar(255)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  phone        String?  @db.VarChar(20)
+  initials     String?  @db.VarChar(10)
+  isActive     Boolean  @default(true) @map("is_active")
+  parentId     String?  @map("parent_id")
+  studentId    String?  @map("student_id")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  batches          Batch[]
+  classSessions    ClassSession[] @relation("SessionCreator")
+  attendanceMarked Attendance[]   @relation("AttendanceMarker")
+  reminderRules    ReminderRule[]
+  loginOtps        LoginOtp[]
+  parent           Parent?        @relation(fields: [parentId], references: [id])
+  student          Student?       @relation(fields: [studentId], references: [id])
+
+  @@index([role], name: "idx_users_role")
+  @@index([parentId], name: "idx_users_parent")
+  @@index([studentId], name: "idx_users_student")
+  @@map("users")
+}
+
+// Second factor for login: a 6-digit code emailed after the password is verified.
+// One row per login attempt; consumed or expired rows are inert and periodically pruned.
+model LoginOtp {
+  id         String    @id @default(uuid()) @map("otp_id")
+  userId     String    @map("user_id")
+  codeHash   String    @map("code_hash")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz()
+  attempts   Int       @default(0)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz()
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt], name: "idx_login_otp_user")
+  @@map("login_otps")
+}
+
+// ============================================================
+// 3.2 — Lead & Parent Management
+// ============================================================
+
+model Parent {
+  id             String    @id @default(uuid()) @map("parent_id")
+  fullName       String    @map("full_name") @db.VarChar(255)
+  whatsappNumber String    @unique @map("whatsapp_number") @db.VarChar(20)
+  email          String?   @db.VarChar(255)
+  address        String?
+  optedOut       Boolean   @default(false) @map("opted_out")
+  optedOutAt     DateTime? @map("opted_out_at") @db.Timestamptz()
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  leads       Lead[]
+  students    Student[]
+  messages    Message[]
+  calls       CallLog[]
+  portalUsers User[]
+
+  @@index([whatsappNumber], name: "idx_parents_whatsapp")
+  @@map("parents")
+}
+
+enum LeadSource {
+  Meta
+  Website
+  Referral
+  GoogleSheets
+}
+
+// UI stages: New=enquiry, Contacted=contacted, Interested=qualified,
+// Demo Booked=demo_scheduled, Follow-up=follow_up, Admission=converted, Lost=lost
+// How soon the family wants to start, as noted by the counsellor on the enquiry sheet
+enum LeadTimeline {
+  immediately
+  within_week
+  when_program_starts
+  just_enquiring
+}
+
+enum LeadStatus {
+  enquiry
+  contacted
+  qualified
+  demo_scheduled
+  follow_up
+  converted
+  lost
+}
+
+model Lead {
+  id                 String        @id @default(uuid()) @map("lead_id")
+  parentId           String        @map("parent_id")
+  source             LeadSource?
+  status             LeadStatus    @default(enquiry)
+  gradeInterested    String?       @map("grade_interested") @db.VarChar(50)
+  boardInterested    String?       @map("board_interested") @db.VarChar(50)
+  subjectsInterested String[]      @map("subjects_interested")
+  requirements       String?
+  assignedAgentId    String?       @map("assigned_agent_id") @db.VarChar(100)
+  aiScore            Int?          @map("ai_score")
+  timeline           LeadTimeline?
+  notes              String?
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  parent       Parent        @relation(fields: [parentId], references: [id])
+  appointments Appointment[]
+  messages     Message[]
+  payments     Payment[]
+  calls        CallLog[]
+
+  @@index([status], name: "idx_leads_status")
+  @@map("leads")
+}
+
+// ============================================================
+// 3.3 — Student & Academic Management
+// ============================================================
+
+model Course {
+  id          String  @id @default(uuid()) @map("course_id")
+  courseName  String  @map("course_name") @db.VarChar(255)
+  description String?
+
+  // Relations
+  batches Batch[]
+
+  @@map("courses")
+}
+
+model Batch {
+  id        String    @id @default(uuid()) @map("batch_id")
+  courseId  String    @map("course_id")
+  batchName String?   @map("batch_name") @db.VarChar(100)
+  startDate DateTime? @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+  teacherId String?   @map("teacher_id")
+
+  // Relations
+  course      Course          @relation(fields: [courseId], references: [id])
+  teacher     User?           @relation(fields: [teacherId], references: [id])
+  enrollments Enrollment[]
+  attendance  Attendance[]
+  sessions    ClassSession[]
+  classLinkId String?         @map("class_link_id")
+  classLink   ClassLink?      @relation(fields: [classLinkId], references: [id])
+  schedules   BatchSchedule[]
+
+  @@index([teacherId], name: "idx_batches_teacher")
+  @@map("batches")
+}
+
+enum StudentStatus {
+  active
+  inactive
+  graduated
+}
+
+model Student {
+  id            String        @id @default(uuid()) @map("student_id")
+  parentId      String        @map("parent_id")
+  fullName      String        @map("full_name") @db.VarChar(255)
+  dateOfBirth   DateTime?     @map("date_of_birth") @db.Date
+  grade         String?       @db.VarChar(20)
+  board         String?       @db.VarChar(40)
+  admissionDate DateTime?     @map("admission_date") @db.Date
+  status        StudentStatus @default(active)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  parent          Parent           @relation(fields: [parentId], references: [id])
+  enrollments     Enrollment[]
+  academicRecords AcademicRecord[]
+  attendance      Attendance[]
+  weeklyReports   WeeklyReport[]
+  payments        Payment[]
+  messages        Message[]
+  portalUsers     User[]
+
+  @@map("students")
+}
+
+model Enrollment {
+  id             String   @id @default(uuid()) @map("enrollment_id")
+  studentId      String   @map("student_id")
+  batchId        String   @map("batch_id")
+  enrollmentDate DateTime @default(now()) @map("enrollment_date") @db.Date
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id])
+  batch   Batch   @relation(fields: [batchId], references: [id])
+
+  @@unique([studentId, batchId])
+  @@map("enrollments")
+}
+
+model AcademicRecord {
+  id                   String    @id @default(uuid()) @map("record_id")
+  studentId            String    @map("student_id")
+  subject              String?   @db.VarChar(100)
+  markObtained         Decimal?  @map("mark_obtained") @db.Decimal(10, 2)
+  totalMarks           Decimal?  @map("total_marks") @db.Decimal(10, 2)
+  attendancePercentage Decimal?  @map("attendance_percentage") @db.Decimal(5, 2)
+  testDate             DateTime? @map("test_date") @db.Date
+  teacherComments      String?   @map("teacher_comments")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@index([studentId], name: "idx_academic_records_student_id")
+  @@map("academic_records")
+}
+
+// ============================================================
+// 3.4 — AI Operations & Scheduling
+// ============================================================
+
+enum AppointmentStatus {
+  scheduled
+  completed
+  cancelled
+  no_show
+}
+
+model Appointment {
+  id              String            @id @default(uuid()) @map("appointment_id")
+  leadId          String            @map("lead_id")
+  scheduledAt     DateTime          @map("scheduled_at") @db.Timestamptz()
+  durationMinutes Int               @default(30) @map("duration_minutes")
+  status          AppointmentStatus @default(scheduled)
+  feedback        String?
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  lead Lead @relation(fields: [leadId], references: [id])
+
+  @@map("appointments")
+}
+
+enum AiActivityStatus {
+  success
+  failure
+  pending
+}
+
+model AiActivityLog {
+  id         BigInt           @id @default(autoincrement()) @map("log_id")
+  agentId    String           @map("agent_id") @db.VarChar(100)
+  targetId   String?          @map("target_id") @db.VarChar(64)
+  actionType String?          @map("action_type") @db.VarChar(100)
+  payload    Json?
+  status     AiActivityStatus
+  timestamp  DateTime         @default(now()) @db.Timestamptz()
+
+  @@index([agentId], name: "idx_ai_log_agent_id")
+  @@map("ai_activity_log")
+}
+
+// ============================================================
+// 3.5 — Client priorities: attendance, class links, weekly reports, reminders
+// ============================================================
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  excused
+}
+
+model Attendance {
+  id         String           @id @default(uuid()) @map("attendance_id")
+  studentId  String           @map("student_id")
+  batchId    String           @map("batch_id")
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  note       String?
+  markedById String?          @map("marked_by_id")
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz()
+
+  student  Student @relation(fields: [studentId], references: [id])
+  batch    Batch   @relation(fields: [batchId], references: [id])
+  markedBy User?   @relation("AttendanceMarker", fields: [markedById], references: [id])
+
+  @@unique([studentId, batchId, date])
+  @@index([batchId, date], name: "idx_attendance_batch_date")
+  @@map("attendance")
+}
+
+model ClassSession {
+  id              String    @id @default(uuid()) @map("session_id")
+  batchId         String    @map("batch_id")
+  topic           String?   @db.VarChar(255)
+  startsAt        DateTime  @map("starts_at") @db.Timestamptz()
+  durationMinutes Int       @default(60) @map("duration_minutes")
+  meetingUrl      String    @map("meeting_url")
+  notes           String?
+  createdById     String?   @map("created_by_id")
+  announcedAt     DateTime? @map("announced_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  batch     Batch @relation(fields: [batchId], references: [id])
+  createdBy User? @relation("SessionCreator", fields: [createdById], references: [id])
+
+  @@index([batchId, startsAt], name: "idx_sessions_batch_start")
+  @@map("class_sessions")
+}
+
+enum ReportStatus {
+  draft
+  approved
+  sent
+  failed
+}
+
+model WeeklyReport {
+  id           String       @id @default(uuid()) @map("report_id")
+  studentId    String       @map("student_id")
+  weekStart    DateTime     @map("week_start") @db.Date
+  summary      String
+  metrics      Json?
+  status       ReportStatus @default(draft)
+  approvedById String?      @map("approved_by_id")
+  approvedAt   DateTime?    @map("approved_at") @db.Timestamptz()
+  sentAt       DateTime?    @map("sent_at") @db.Timestamptz()
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, weekStart])
+  @@index([status], name: "idx_reports_status")
+  @@map("weekly_reports")
+}
+
+enum ReminderAudience {
+  teacher
+  parent
+}
+
+// Recurring WhatsApp reminder, e.g. "every Monday 09:00 remind teachers to mark attendance".
+model ReminderRule {
+  id          String           @id @default(uuid()) @map("rule_id")
+  name        String           @db.VarChar(120)
+  audience    ReminderAudience
+  dayOfWeek   Int              @map("day_of_week") // 0=Sunday ... 6=Saturday
+  timeOfDay   String           @map("time_of_day") @db.VarChar(5) // HH:mm, Asia/Kolkata
+  template    String
+  enabled     Boolean          @default(true)
+  lastRunAt   DateTime?        @map("last_run_at") @db.Timestamptz()
+  createdById String?          @map("created_by_id")
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  createdBy User? @relation(fields: [createdById], references: [id])
+
+  @@map("reminder_rules")
+}
+
+// ============================================================
+// 3.6 — Conversations, approvals, payments, calls
+// ============================================================
+
+enum MessageDirection {
+  inbound
+  outbound
+}
+
+enum MessageChannel {
+  whatsapp
+  call
+  system
+  email
+}
+
+model Message {
+  id         String           @id @default(uuid()) @map("message_id")
+  parentId   String?          @map("parent_id")
+  leadId     String?          @map("lead_id")
+  studentId  String?          @map("student_id")
+  direction  MessageDirection
+  channel    MessageChannel   @default(whatsapp)
+  body       String
+  subject    String?          @db.VarChar(255)
+  status     String?          @db.VarChar(30)
+  externalId String?          @unique @map("external_id") @db.VarChar(128)
+  agentId    String?          @map("agent_id") @db.VarChar(100)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  parent  Parent?  @relation(fields: [parentId], references: [id])
+  lead    Lead?    @relation(fields: [leadId], references: [id])
+  student Student? @relation(fields: [studentId], references: [id])
+
+  @@index([leadId, createdAt], name: "idx_messages_lead")
+  @@index([parentId, createdAt], name: "idx_messages_parent")
+  @@map("messages")
+}
+
+enum ApprovalRisk {
+  low
+  medium
+  high
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+  executed
+  failed
+}
+
+model Approval {
+  id           String         @id @default(uuid()) @map("approval_id")
+  agentId      String         @map("agent_id") @db.VarChar(100)
+  actionType   String         @map("action_type") @db.VarChar(100)
+  title        String         @db.VarChar(255)
+  reason       String?
+  payload      Json
+  targetId     String?        @map("target_id") @db.VarChar(64)
+  risk         ApprovalRisk   @default(medium)
+  status       ApprovalStatus @default(pending)
+  decidedById  String?        @map("decided_by_id")
+  decidedAt    DateTime?      @map("decided_at") @db.Timestamptz()
+  decisionNote String?        @map("decision_note")
+  result       Json?
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([status, createdAt], name: "idx_approvals_status")
+  @@map("approvals")
+}
+
+model Payment {
+  id           String   @id @default(uuid()) @map("payment_id")
+  leadId       String?  @map("lead_id")
+  studentId    String?  @map("student_id")
+  reference    String   @unique @db.VarChar(128)
+  amount       Decimal  @db.Decimal(10, 2)
+  currency     String   @default("INR") @db.VarChar(3)
+  method       String?  @db.VarChar(40)
+  recordedById String?  @map("recorded_by_id")
+  paidAt       DateTime @default(now()) @map("paid_at") @db.Timestamptz()
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  lead    Lead?    @relation(fields: [leadId], references: [id])
+  student Student? @relation(fields: [studentId], references: [id])
+
+  @@map("payments")
+}
+
+model CallLog {
+  id          String   @id @default(uuid()) @map("call_log_id")
+  callId      String   @unique @map("call_id") @db.VarChar(64)
+  parentId    String?  @map("parent_id")
+  leadId      String?  @map("lead_id")
+  phone       String?  @db.VarChar(20)
+  transcript  Json
+  summary     String?
+  outcome     String?  @db.VarChar(60)
+  durationSec Int?     @map("duration_sec")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  parent Parent? @relation(fields: [parentId], references: [id])
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  @@index([leadId], name: "idx_calls_lead")
+  @@map("call_logs")
+}
+
+// A standing meeting link (e.g. a Microsoft Teams room) that is reused for a class group
+// for the student's whole journey, such as "8th CBSE Science".
+model ClassLink {
+  id         String   @id @default(uuid()) @map("class_link_id")
+  name       String   @unique @db.VarChar(120)
+  meetingUrl String   @map("meeting_url")
+  grade      String?  @db.VarChar(20)
+  board      String?  @db.VarChar(40)
+  subject    String?  @db.VarChar(80)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  batches   Batch[]
+  schedules BatchSchedule[]
+
+  @@map("class_links")
+}
+
+// Recurring weekly slot of a batch; the scheduler turns it into a ClassSession each day.
+model BatchSchedule {
+  id              String  @id @default(uuid()) @map("schedule_id")
+  batchId         String  @map("batch_id")
+  dayOfWeek       Int     @map("day_of_week") // 0=Sunday ... 6=Saturday
+  startTime       String  @map("start_time") @db.VarChar(5) // HH:mm, Asia/Kolkata
+  durationMinutes Int     @default(60) @map("duration_minutes")
+  // Overrides the batch's standing link for this slot (e.g. Friday uses a different room)
+  classLinkId     String? @map("class_link_id")
+
+  batch     Batch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  classLink ClassLink? @relation(fields: [classLinkId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, dayOfWeek, startTime])
+  @@map("batch_schedules")
+}

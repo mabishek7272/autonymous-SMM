@@ -1,0 +1,220 @@
+# E-Kalavya automation stack (dashboard + AI agent engines).
+#
+#   Local dev (auto-loads docker-compose.override.yml, which publishes Postgres/Redis/Evolution GO
+#   ports on localhost):          docker compose up -d
+#   Production (nothing but the API/frontend published):
+#                                 docker compose -f docker-compose.yml up -d
+#
+# Voice call agent (opt-in, large image + ~1 GB Whisper weights):
+#                                 docker compose --profile voice up -d --build
+#   Needs backend/call_agent/.env (copy backend/call_agent/.env.example) and the Whisper weights in
+#   backend/model/whisper-tamil-small/. EKALAVYA_AGENT_KEY must be set in backend/.env AND call_agent/.env.
+#
+# Required in the shell or a root .env file for the evolution-go service:
+#   EVOLUTION_GO_GLOBAL_API_KEY   admin key of the Evolution GO gateway (openssl rand -hex 24)
+#   EVOLUTION_GO_API_KEY          instance token used by the backend (must be the `token` given to
+#                                 POST /instance/create, see backend/.env.example)
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-smm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ekalavya_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ekalavya_pass}
+      POSTGRES_DB: ekalavya_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ekalavya_user -d ekalavya_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ai-smm_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── RabbitMQ (required for Evolution GO's webhook delivery) ──
+  # Evolution GO logs "DISPATCHING WEBHOOK" and publishes the event to an internal AMQP queue
+  # unconditionally, but a worker only POSTs it to WEBHOOK_URL once that queue has a consumer —
+  # which needs a real broker. Without this, webhooks are silently swallowed: the gateway looks
+  # connected and sends fine, but inbound messages and delivery receipts never reach the backend.
+  evolution-rabbitmq:
+    image: rabbitmq:3.13-alpine
+    container_name: ai-smm_evolution_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: evolution
+      RABBITMQ_DEFAULT_PASS: ${EVOLUTION_RABBITMQ_PASSWORD:-evolution_amqp_pass}
+    volumes:
+      - evolution_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ── Evolution GO (WhatsApp gateway) ──────────────────────────
+  # Docs documented only the `latest` tag (VERSION file of the source is 0.7.2). Pin
+  # EVOLUTION_GO_IMAGE to a concrete tag from https://hub.docker.com/r/evoapicloud/evolution-go
+  # once verified, or build from source (`git clone evolution-foundation/evolution-go`, `make docker-build`)
+  # and point EVOLUTION_GO_IMAGE at the local image.
+  evolution-postgres:
+    image: postgres:16-alpine
+    container_name: ai-smm_evolution_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${EVOLUTION_POSTGRES_PASSWORD:-evolution_pass}
+      POSTGRES_DB: evogo_auth
+    volumes:
+      - evolution_postgres_data:/var/lib/postgresql/data
+      - ./docker/evolution-init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evogo_auth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  evolution-go:
+    image: ${EVOLUTION_GO_IMAGE:-evoapicloud/evolution-go:latest}
+    container_name: ai-smm_evolution_go
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8080
+      CLIENT_NAME: ekalavya
+      GLOBAL_API_KEY: ${EVOLUTION_GO_GLOBAL_API_KEY:?set EVOLUTION_GO_GLOBAL_API_KEY}
+      # Self-activates the free instance license on startup — no manual Manager UI registration needed.
+      EVOLUTION_OPERATOR_EMAIL: ${EVOLUTION_OPERATOR_EMAIL:-}
+      POSTGRES_AUTH_DB: postgresql://evolution:${EVOLUTION_POSTGRES_PASSWORD:-evolution_pass}@evolution-postgres:5432/evogo_auth?sslmode=disable
+      POSTGRES_USERS_DB: postgresql://evolution:${EVOLUTION_POSTGRES_PASSWORD:-evolution_pass}@evolution-postgres:5432/evogo_users?sslmode=disable
+      DATABASE_SAVE_MESSAGES: "false"
+      CONNECT_ON_STARTUP: "true"
+      WEBHOOK_FILES: "false"
+      # Every event of every instance is POSTed here; the backend authenticates it by the instanceToken in the body.
+      WEBHOOK_URL: http://backend:3001/webhooks/evolution-go
+      EVENT_IGNORE_GROUP: "true"
+      EVENT_IGNORE_STATUS: "true"
+      WADEBUG: INFO
+      LOGTYPE: console
+      # Without this, webhook events are published but never delivered (see the comment above).
+      AMQP_URL: amqp://evolution:${EVOLUTION_RABBITMQ_PASSWORD:-evolution_amqp_pass}@evolution-rabbitmq:5672/
+    volumes:
+      - evolution_data:/app/dbdata
+      - evolution_logs:/app/logs
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+      evolution-rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/server/ok"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ── E-Kalavya API Backend (automation engines, agents, WhatsApp orchestration) ──
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai-smm_backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://ekalavya_user:${POSTGRES_PASSWORD:-ekalavya_pass}@postgres:5432/ekalavya_db?schema=public
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      EVOLUTION_GO_URL: http://evolution-go:8080
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      # Used by GET /api/v1/dev/voice/status. Only reachable when the `voice` profile is enabled.
+      CALL_AGENT_URL: http://call-agent:8085
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      evolution-go:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./backend/logs:/app/logs
+
+  # ── Voice call agent (opt-in: `--profile voice`) ─────────────
+  # Build context is the package directory itself so backend/model (GBs) and node_modules are never
+  # sent to the Docker daemon. The image installs the package as /app/call_agent.
+  call-agent:
+    profiles: ["voice"]
+    build:
+      context: ./backend/call_agent
+      dockerfile: Dockerfile
+    container_name: ai-smm_call_agent
+    restart: unless-stopped
+    env_file:
+      - path: ./backend/call_agent/.env
+        required: false
+    environment:
+      EKALAVYA_API_URL: http://backend:3001/api/v1
+      WHISPER_MODEL_PATH: /models/whisper-tamil-small
+    volumes:
+      - ./backend/model/whisper-tamil-small:/models/whisper-tamil-small:ro
+    ports:
+      - "127.0.0.1:8085:8085"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8085/health', timeout=4).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s   # Whisper weights take a while to load
+
+  # ── E-Kalavya Staff Dashboard ─────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ai-smm_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  evolution_postgres_data:
+  evolution_rabbitmq_data:
+  evolution_data:
+  evolution_logs:
+
+networks:
+  default:
+    name: ai-smm_network
